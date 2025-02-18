@@ -120,4 +120,40 @@ internal class JsonToolsClassGenerator {
             return ResourceManager.GetString("JsonRequiredError", resourceCulture);
         }
     }
+
+    /// <summary>
+    /// Looks up a localized string similar to a generalized error message
+    /// </summary>
+    internal static string InputError {
+        get {
+            return ResourceManager.GetString("InputError", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    internal static string Success {
+        get {
+            return ResourceManager.GetString("Success", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    internal static string ClassGenerated {
+        get {
+            return ResourceManager.GetString("ClassGenerated", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    internal static string SchemaError {
+        get {
+            return ResourceManager.GetString("SchemaError", resourceCulture);
+        }
+    }
 }

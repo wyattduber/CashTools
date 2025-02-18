@@ -126,7 +126,7 @@
     <comment/>
   </data>
   <data name="LongDisplayTitle" xml:space="preserve">
-    <value>Json toC# Class Generator</value>
+    <value>Json to C# Class Generator</value>
     <comment/>
   </data>
   <data name="ShortDisplayTitle" xml:space="preserve">
@@ -151,6 +151,14 @@
   </data>
   <data name="JsonRequiredError" xml:space="preserve">
     <value>A Json Body is required.</value>
+    <comment/>
+  </data>
+  <data name="OutputType" xml:space="preserve">
+    <value>C# Class</value>
+    <comment/>
+  </data>
+  <data name="OutputTypeDescription" xml:space="preserve">
+    <value>This </value>
     <comment/>
   </data>
 </root>

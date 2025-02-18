@@ -1,10 +1,11 @@
-using DevToys.Api;
-using static DevToys.Api.GUI;
 using System.ComponentModel.Composition;
-using System.Text.Json.Nodes;
-using System.Text.Json;
-using CommunityToolkit.Diagnostics;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using CommunityToolkit.Diagnostics;
+using DevToys.Api;
+using NJsonSchema;
+using static DevToys.Api.GUI;
 
 namespace JsonTools;
 
@@ -26,20 +27,10 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 {
     private UIToolView? _view;
 
-    private CancellationTokenSource _cancellationTokenSource = new();
+    private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
     [Import]
     private ISettingsProvider _settingsProvider = null!;
-
-    #region UIElements
-    private readonly IUIMultiLineTextInput _input;
-    private readonly IUIMultiLineTextInput _schemaOutput;
-    private readonly IUIMultiLineTextInput _classOutput;
-    private readonly IUIFileSelector _inputFile;
-    private readonly IUIStack _errorStack = Stack().Vertical();
-    private readonly IUIInfoBar _defaultError;
-    #endregion
-
 
     public JsonToolsClassGeneratorGui()
     {
@@ -48,14 +39,9 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             .Language("json")
             .OnTextChanged(TriggerValidation);
 
-        _schemaOutput = MultiLineTextInput()
-            .Title(JsonToolsClassGenerator.SchemaOutput)
-            .Language("json")
-            .ReadOnly();
-
-        _classOutput = MultiLineTextInput()
+        _output = MultiLineTextInput()
             .Title(JsonToolsClassGenerator.ClassOutput)
-            .Language("csharp")
+            .Language("typescript")
             .ReadOnly();
 
         _inputFile = FileSelector("input-file")
@@ -66,12 +52,37 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         _defaultError = GetGeneralErrorInfoBar(JsonToolsClassGenerator.JsonRequiredError);
     }
 
-    public void OnDataReceived(string dataTypeName, object? parsedData)
+    #region enums
+
+    enum GridRows
     {
-        _input.Text(PrettifyJsonInput(parsedData!.ToString()!));
+        ConfigRow,
+        UploadRow,
+        InputRow,
+        ErrorsRow
     }
 
-    private async ValueTask TriggerValidation(string arg) 
+    private enum GridColumns
+    {
+        Stretch
+    }
+
+    #endregion
+
+    #region events
+
+    private async ValueTask OnFileSelected(IUIMultiLineTextInput input, SandboxedFileReader[] files)
+    {
+        Guard.HasSizeEqualTo(files, 1);
+        using var memStream = new MemoryStream();
+        using var file = files[0];
+
+        await file.CopyFileContentToAsync(memStream, CancellationToken.None);
+        var str = Encoding.UTF8.GetString(memStream.ToArray());
+        input.Text(PrettifyAsJsonOrDoNothing(str));
+    }
+
+    private async ValueTask TriggerValidation(string arg)
     {
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource = new CancellationTokenSource();
@@ -88,9 +99,49 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         catch (TaskCanceledException) { }
     }
 
-    #region Json Handling
+    public void OnDataReceived(string dataTypeName, object? parsedData)
+    {
+        _input.Text(PrettifyAsJsonOrDoNothing(parsedData!.ToString()!));
+    }
 
-    private string PrettifyJsonInput(string str) 
+    private async void OnInputFileSelected(SandboxedFileReader[] files)
+    {
+        await OnFileSelected(_input, files);
+    }
+
+    #endregion
+
+
+    #region UIElements
+
+    private readonly IUIMultiLineTextInput _input;
+    private readonly IUIMultiLineTextInput _output;
+
+    private readonly IUIFileSelector _inputFile;
+
+    private readonly IUIStack _errorsStack = Stack().Vertical();
+
+    private readonly IUIInfoBar _defaultError;
+
+    #endregion
+
+    #region methods
+    private void GenerateClass()
+    {
+        var schema = ValidateAndParseSchema();
+        if (schema == null)
+        {
+            return;
+        }
+
+        var csharpGenerator = new NJsonSchema.CodeGeneration.CSharp.CSharpGenerator(schema);
+        _output.Text(csharpGenerator.GenerateFile());
+    }
+
+    /**
+         Prettify the JSON string if it is valid JSON, otherwise return the string as is.
+    */
+    private string PrettifyAsJsonOrDoNothing(string str)
     {
         try
         {
@@ -103,31 +154,66 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         }
     }
 
-    private void GenerateClass() 
+    /**
+        Get the error message if the JSON is invalid, otherwise return an empty string.
+    */
+    private string GetJsonParseError(string json)
     {
-
+        try
+        {
+            JsonNode.Parse(json);
+            return string.Empty;
+        }
+        catch (JsonException e)
+        {
+            return e.Message;
+        }
     }
 
-    #endregion
-
-    #region Input File Logic
-
-    private async void OnInputFileSelected(SandboxedFileReader[] files) => await  OnFileSelected(_input, files);
-
-    private async ValueTask OnFileSelected(IUIMultiLineTextInput input, SandboxedFileReader[] files)
+    private JsonSchema? ValidateAndParseSchema()
     {
-        Guard.HasSizeEqualTo(files, 1);
-        using var memStream = new MemoryStream();
-        using var file = files[0];
+        if (string.IsNullOrWhiteSpace(_input.Text))
+        {
+            _errorsStack.WithChildren([_defaultError]);
+        }
+        else
+        {
+            var jsonError = GetJsonParseError(_input.Text);
+            if (!string.IsNullOrEmpty(jsonError))
+            {
+                _errorsStack.WithChildren(
+                    GetErrorInfoBar(JsonToolsClassGenerator.InputError, jsonError)
+                );
+            }
+            else
+            {
+                JsonSchema? schema = null;
+                try
+                {
+                    schema = JsonSchema.FromJsonAsync(_input.Text).Result;
+                }
+                catch (Exception e)
+                {
+                    _errorsStack.WithChildren(
+                        GetErrorInfoBar(JsonToolsClassGenerator.SchemaError, e.Message)
+                    );
+                }
+                _errorsStack.WithChildren(
+                    [
+                        InfoBar()
+                            .ShowIcon()
+                            .Title(JsonToolsClassGenerator.Success)
+                            .Description(JsonToolsClassGenerator.ClassGenerated)
+                            .Success()
+                            .Open()
+                    ]
+                );
+                return schema;
+            }
+        }
 
-        await file.CopyFileContentToAsync(memStream, CancellationToken.None);
-        var str = Encoding.UTF8.GetString(memStream.ToArray());
-        input.Text(PrettifyJsonInput(str));
-    }    
-
-    #endregion
-
-    #region Error Handling
+        return null;
+    }
 
     private static IUIInfoBar GetGeneralErrorInfoBar(string error)
     {
@@ -141,13 +227,39 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 
     #endregion
 
-    #region Generate View
     public UIToolView View
     {
-        get => _view!;
-        set => _view = value;
+        get
+        {
+            _view ??= new UIToolView(
+                Grid()
+                    .Rows(
+                        (GridRows.ConfigRow, Auto),
+                        (GridRows.UploadRow, Auto),
+                        (GridRows.InputRow, new UIGridLength(1, UIGridUnitType.Fraction)),
+                        (GridRows.ErrorsRow, Auto)
+                    )
+                    .Columns((GridColumns.Stretch, new UIGridLength(1, UIGridUnitType.Fraction)))
+                    .Cells(
+                        Cell(GridRows.UploadRow, GridColumns.Stretch, _inputFile),
+                        Cell(
+                            GridRows.InputRow,
+                            GridColumns.Stretch,
+                            SplitGrid()
+                                .Vertical()
+                                .WithLeftPaneChild(_input)
+                                .WithRightPaneChild(_output)
+                        ),
+                        Cell(
+                            GridRows.ErrorsRow,
+                            GridColumns.Stretch,
+                            _errorsStack.WithChildren([_defaultError])
+                        )
+                    )
+            );
+            return _view;
+        }
     }
-    #endregion
 
 }
 
