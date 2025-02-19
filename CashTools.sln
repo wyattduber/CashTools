@@ -2,7 +2,7 @@
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonTools", "JsonTools\JsonTools\JsonTools.csproj", "{9CC9BA48-9F58-432E-BA82-D7733A81038A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CashTools", "CashTools\CashTools.csproj", "{9CC9BA48-9F58-432E-BA82-D7733A81038A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

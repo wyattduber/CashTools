@@ -7,20 +7,20 @@ using DevToys.Api;
 using NJsonSchema;
 using static DevToys.Api.GUI;
 
-namespace JsonTools;
+namespace CashTools.ClassGenerator;
 
 [Export(typeof(IGuiTool))]
-[Name("JsonToolsClassGenerator")] // A unique, internal name of the tool.
+[Name("CashToolsClassGenerator")] // A unique, internal name of the tool.
 [ToolDisplayInformation(
     IconFontName = "DevToys-Tools-Icons",
     IconGlyph = '\u0108', 
     GroupName = "CashTools", 
-    ResourceManagerAssemblyIdentifier = nameof(JsonToolsResourceAssemblyIdentifier),
+    ResourceManagerAssemblyIdentifier = nameof(CashToolsResourceAssemblyIdentifier),
     ResourceManagerBaseName = "JsonTools.ClassGenerator.JsonToolsClassGenerator",
-    ShortDisplayTitleResourceName = nameof(JsonToolsClassGenerator.ShortDisplayTitle), 
-    LongDisplayTitleResourceName = nameof(JsonToolsClassGenerator.LongDisplayTitle),
-    DescriptionResourceName = nameof(JsonToolsClassGenerator.Description),
-    AccessibleNameResourceName = nameof(JsonToolsClassGenerator.AccessibleName)
+    ShortDisplayTitleResourceName = nameof(CashToolsClassGenerator.ShortDisplayTitle), 
+    LongDisplayTitleResourceName = nameof(CashToolsClassGenerator.LongDisplayTitle),
+    DescriptionResourceName = nameof(CashToolsClassGenerator.Description),
+    AccessibleNameResourceName = nameof(CashToolsClassGenerator.AccessibleName)
 )]
 [AcceptedDataTypeName(PredefinedCommonDataTypeNames.Json)]
 internal sealed class JsonToolsClassGeneratorGui : IGuiTool
@@ -35,12 +35,12 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
     public JsonToolsClassGeneratorGui()
     {
         _input = MultiLineTextInput()
-            .Title(JsonToolsClassGenerator.Input)
+            .Title(CashToolsClassGenerator.Input)
             .Language("json")
             .OnTextChanged(TriggerValidation);
 
         _output = MultiLineTextInput()
-            .Title(JsonToolsClassGenerator.ClassOutput)
+            .Title(CashToolsClassGenerator.ClassOutput)
             .Language("typescript")
             .ReadOnly();
 
@@ -49,7 +49,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             .OnFilesSelected(OnInputFileSelected)
             .LimitFileTypesTo(".json");
 
-        _defaultError = GetGeneralErrorInfoBar(JsonToolsClassGenerator.JsonRequiredError);
+        _defaultError = GetGeneralErrorInfoBar(CashToolsClassGenerator.JsonRequiredError);
     }
 
     #region enums
@@ -182,7 +182,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             if (!string.IsNullOrEmpty(jsonError))
             {
                 _errorsStack.WithChildren(
-                    GetErrorInfoBar(JsonToolsClassGenerator.InputError, jsonError)
+                    GetErrorInfoBar(CashToolsClassGenerator.InputError, jsonError)
                 );
             }
             else
@@ -195,15 +195,15 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
                 catch (Exception e)
                 {
                     _errorsStack.WithChildren(
-                        GetErrorInfoBar(JsonToolsClassGenerator.SchemaError, e.Message)
+                        GetErrorInfoBar(CashToolsClassGenerator.SchemaError, e.Message)
                     );
                 }
                 _errorsStack.WithChildren(
                     [
                         InfoBar()
                             .ShowIcon()
-                            .Title(JsonToolsClassGenerator.Success)
-                            .Description(JsonToolsClassGenerator.ClassGenerated)
+                            .Title(CashToolsClassGenerator.Success)
+                            .Description(CashToolsClassGenerator.ClassGenerated)
                             .Success()
                             .Open()
                     ]
@@ -217,7 +217,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 
     private static IUIInfoBar GetGeneralErrorInfoBar(string error)
     {
-        return GetErrorInfoBar(JsonToolsClassGenerator.GeneralError, error);
+        return GetErrorInfoBar(CashToolsClassGenerator.GeneralError, error);
     }
 
     private static IUIInfoBar GetErrorInfoBar(string title, string error)

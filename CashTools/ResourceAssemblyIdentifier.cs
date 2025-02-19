@@ -1,11 +1,11 @@
 using DevToys.Api;
 using System.ComponentModel.Composition;
 
-namespace JsonTools;
+namespace CashTools;
 
 [Export(typeof(IResourceAssemblyIdentifier))]
-[Name(nameof(JsonToolsResourceAssemblyIdentifier))]
-internal sealed class JsonToolsResourceAssemblyIdentifier : IResourceAssemblyIdentifier
+[Name(nameof(CashToolsResourceAssemblyIdentifier))]
+internal sealed class CashToolsResourceAssemblyIdentifier : IResourceAssemblyIdentifier
 {
     public ValueTask<FontDefinition[]> GetFontDefinitionsAsync()
     {

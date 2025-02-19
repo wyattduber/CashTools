@@ -1,15 +1,15 @@
 using System;
 
-namespace JsonTools;
+namespace CashTools.ClassGenerator;
 
-internal class JsonToolsClassGenerator {
+internal class CashToolsClassGenerator {
 
     private static global::System.Resources.ResourceManager resourceMan;
 
     private static global::System.Globalization.CultureInfo resourceCulture;
 
     [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-    internal JsonToolsClassGenerator() {
+    internal CashToolsClassGenerator() {
     }
 
     /// <summary>
@@ -19,7 +19,7 @@ internal class JsonToolsClassGenerator {
     internal static global::System.Resources.ResourceManager ResourceManager {
         get {
             if (object.ReferenceEquals(resourceMan, null)) {
-                global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("JsonTools.ClassGenerator.JsonToolsClassGenerator", typeof(JsonToolsClassGenerator).Assembly);
+                global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CashTools.ClassGenerator.CashToolsClassGenerator", typeof(CashToolsClassGenerator).Assembly);
                 resourceMan = temp;
             }
             return resourceMan;
