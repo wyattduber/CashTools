@@ -14,7 +14,7 @@ namespace CashTools.ClassGenerator;
 [ToolDisplayInformation(
     IconFontName = "DevToys-Tools-Icons",
     IconGlyph = '\u0108', 
-    GroupName = "CashTools", 
+    GroupName = nameof(CashTools.BaseGroupName), 
     ResourceManagerAssemblyIdentifier = nameof(CashToolsResourceAssemblyIdentifier),
     ResourceManagerBaseName = "JsonTools.ClassGenerator.JsonToolsClassGenerator",
     ShortDisplayTitleResourceName = nameof(CashToolsClassGenerator.ShortDisplayTitle), 

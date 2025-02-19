@@ -4,7 +4,7 @@ using System.ComponentModel.Composition;
 namespace CashTools;
 
 [Export(typeof(GuiToolGroup))]
-[Name("CashTools.NET")]
+[Name(nameof(CashTools.BaseGroupName))]
 [Order(Before = PredefinedCommonToolGroupNames.Converters)]
 internal class CashToolsGroup : GuiToolGroup
 {
@@ -13,7 +13,7 @@ internal class CashToolsGroup : GuiToolGroup
     {
         IconFontName = "FluentSystemIcons";
         IconGlyph = '\uE670';
-        DisplayTitle = "CashTools.NET";
-        AccessibleName = "CashTools.NET";
+        DisplayTitle = CashTools.BaseGroupName;
+        AccessibleName = CashTools.BaseGroupName;
     }
 }
