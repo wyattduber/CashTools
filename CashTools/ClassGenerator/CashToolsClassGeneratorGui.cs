@@ -1,11 +1,12 @@
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Diagnostics;
 using DevToys.Api;
-using NJsonSchema;
-using NJsonSchema.CodeGeneration.CSharp;
+using Newtonsoft.Json.Linq;
 using static DevToys.Api.GUI;
 
 namespace CashTools.ClassGenerator;
@@ -28,20 +29,20 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 {
     private UIToolView? _view;
 
-    private string? _currentTempFile;
-
-    private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private CancellationTokenSource _cancellationTokenSource = new();
 
     public JsonToolsClassGeneratorGui()
     {
         _input = MultiLineTextInput()
             .Title(CashTools.Input)
             .Language("json")
+            .Extendable()
             .OnTextChanged(TriggerValidation);
 
         _output = MultiLineTextInput()
             .Title(CashTools.ClassOutput)
-            .Language("typescript")
+            .Language("csharp")
+            .Extendable()
             .ReadOnly();
 
         _inputFile = FileSelector("input-file")
@@ -91,14 +92,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         try
         {
             await Task.Delay(500, token);
-            if (!token.IsCancellationRequested)
-            {
-                var tempPath = Path.GetTempPath();
-                _currentTempFile = $"temp{new Random().NextInt64(10000000)}.json";
-                var tempFile = Path.Combine(tempPath, _currentTempFile);
-                await File.WriteAllTextAsync(tempFile, _input.Text, token);
-                GenerateClass();
-            }
+            if (!token.IsCancellationRequested) GenerateCSharpClass("MyClass", "MyNamespace", true, true); // TODO Add settings for these
         }
         catch (TaskCanceledException) { }
     }
@@ -130,23 +124,84 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
     #endregion
 
     #region methods
-    private void GenerateClass()
+
+    private void GenerateCSharpClass
+    (
+        string className, 
+        string namespaceName,
+        bool includeJsonPropertyAttribute,
+        bool useNullableReferenceTypes
+    )
     {
-        var schema = ValidateAndParseSchema();
-        if (schema == null)
+        var obj = ValidateAndParseSchema();
+        if (obj == null) return;
+        StringBuilder sb = new();
+
+        sb.AppendLine($"namespace {namespaceName};");
+        sb.AppendLine();
+
+        sb.AppendLine("public class " + className);
+        sb.AppendLine("{");
+
+        foreach (var property in obj!.Properties())
         {
-            return;
+            string propName = property.Name;
+            string propType = GetCSharpType(property.Value.Type);
+            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{ToCamelCase(propName)}\")]");
+            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {ToPascalCase(propName)} {{ get; set; }}");
+            if (includeJsonPropertyAttribute) sb.AppendLine();
         }
 
-        // Settings
-        var cSharpGenerator = new CSharpGenerator(schema)
+        sb.AppendLine("}");
+        _output.Text(sb.ToString());
+    }
+
+    private static string GetCSharpType(JTokenType type)
+    {
+        return type switch
         {
-            Settings = 
-            {
-                Namespace = "CashTools.Models",
-            }
+            JTokenType.Integer => "int",
+            JTokenType.Float => "double",
+            JTokenType.Boolean => "bool",
+            JTokenType.Array => "List<object>",
+            JTokenType.Object => "object",
+            JTokenType.Null => "object",
+            _ => "string",
         };
-        _output.Text(cSharpGenerator.GenerateFile());
+    }
+
+    private static string ToPascalCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        // Remove non-alphanumeric characters and split words
+        string[] words = Regex.Split(input, @"[^a-zA-Z0-9]+");
+
+        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
+        return string.Concat(Array.ConvertAll(words, word => textInfo.ToTitleCase(word.ToLower())));
+    }
+
+    private static string ToCamelCase(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        // Remove non-alphanumeric characters and split words
+        string[] words = Regex.Split(input, @"[^a-zA-Z0-9]+");
+
+        if (words.Length == 0)
+            return string.Empty;
+
+        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
+
+        // Convert first word to lowercase, others to PascalCase
+        for (int i = 1; i < words.Length; i++)
+        {
+            words[i] = textInfo.ToTitleCase(words[i].ToLower());
+        }
+
+        return words[0].ToLower() + string.Concat(words[1..]); // Join with first word in lowercase
     }
 
     /**
@@ -181,7 +236,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         }
     }
 
-    private JsonSchema? ValidateAndParseSchema()
+    private JObject? ValidateAndParseSchema()
     {
         if (string.IsNullOrWhiteSpace(_input.Text))
         {
@@ -198,14 +253,10 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             }
             else
             {
-                JsonSchema? schema = null;
+                JObject? jObject = null;
                 try
                 {
-                    var tempPath = Path.GetTempPath();
-                    var tempFile = Path.Combine(tempPath, _currentTempFile!);
-                    // get the json from the input file
-                    schema = JsonSchema.FromFileAsync(tempFile).Result;
-                    File.Delete(tempFile);
+                    jObject = JObject.Parse(_input.Text);
                 }
                 catch (Exception e)
                 {
@@ -214,7 +265,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
                     );
                 }
                 _errorsStack.WithChildren([]);
-                return schema;
+                return jObject;
             }
         }
 
