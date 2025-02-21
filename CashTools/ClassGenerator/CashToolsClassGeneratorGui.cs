@@ -16,11 +16,11 @@ namespace CashTools.ClassGenerator;
     IconGlyph = '\u0108', 
     GroupName = nameof(CashTools.BaseGroupName), 
     ResourceManagerAssemblyIdentifier = nameof(CashToolsResourceAssemblyIdentifier),
-    ResourceManagerBaseName = "CashTools.CashTools",
-    ShortDisplayTitleResourceName = nameof(CashTools.ShortDisplayTitle), 
-    LongDisplayTitleResourceName = nameof(CashTools.LongDisplayTitle),
-    DescriptionResourceName = nameof(CashTools.Description),
-    AccessibleNameResourceName = nameof(CashTools.AccessibleName)
+    ResourceManagerBaseName = "CashTools.ClassGenerator.CashToolsClassGenerator",
+    ShortDisplayTitleResourceName = nameof(CashToolsClassGenerator.ShortDisplayTitle), 
+    LongDisplayTitleResourceName = nameof(CashToolsClassGenerator.LongDisplayTitle),
+    DescriptionResourceName = nameof(CashToolsClassGenerator.Description),
+    AccessibleNameResourceName = nameof(CashToolsClassGenerator.AccessibleName)
 )]
 [AcceptedDataTypeName(PredefinedCommonDataTypeNames.Json)]
 internal sealed class JsonToolsClassGeneratorGui : IGuiTool
@@ -33,16 +33,26 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
     private readonly IUIStack _errorsStack = Stack().Vertical();
     private readonly IUIInfoBar _defaultError;
 
+    [Import]
+    private ISettingsProvider _settingsProvider = null!;
+
+    #region Settings
+
+    private static readonly SettingDefinition<bool> isClassStatic = new(name: $"{CashToolsClassGenerator.MakeStaticClass}", defaultValue: false);
+    private static readonly SettingDefinition<AccessModifierOptions> classAccessModifier = new(name: $"{CashToolsClassGenerator.ClassAccessModifier}", defaultValue: AccessModifierOptions.@public);
+
+    #endregion
+
     public JsonToolsClassGeneratorGui()
     {
         _input = MultiLineTextInput()
-            .Title(CashTools.Input)
+            .Title(CashToolsClassGenerator.Input)
             .Language("json")
             .Extendable()
             .OnTextChanged(TriggerValidation);
 
         _output = MultiLineTextInput()
-            .Title(CashTools.ClassOutput)
+            .Title(CashToolsClassGenerator.ClassOutput)
             .Language("csharp")
             .Extendable()
             .ReadOnly();
@@ -52,7 +62,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             .OnFilesSelected(OnInputFileSelected)
             .LimitFileTypesTo(".json");
 
-        _defaultError = UIHelper.GetGeneralErrorInfoBar(CashTools.JsonRequiredError);
+        _defaultError = UIHelper.GetGeneralErrorInfoBar(CashToolsClassGenerator.JsonRequiredError);
     }
 
     private static async ValueTask OnFileSelected(IUIMultiLineTextInput input, SandboxedFileReader[] files)
@@ -123,7 +133,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             if (!string.IsNullOrEmpty(jsonError))
             {
                 _errorsStack.WithChildren(
-                    UIHelper.GetErrorInfoBar(CashTools.InputError, jsonError)
+                    UIHelper.GetErrorInfoBar(CashToolsClassGenerator.InputError, jsonError)
                 );
             }
             else
@@ -136,7 +146,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
                 catch (Exception e)
                 {
                     _errorsStack.WithChildren(
-                        UIHelper.GetErrorInfoBar(CashTools.SchemaError, e.Message)
+                        UIHelper.GetErrorInfoBar(CashToolsClassGenerator.SchemaError, e.Message)
                     );
                 }
                 _errorsStack.WithChildren([]);

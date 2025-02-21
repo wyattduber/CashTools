@@ -117,8 +117,60 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="BaseGroupName" xml:space="preserve">
-    <value>CashTools.NET</value>
+  <data name="AccessibleName" xml:space="preserve">
+    <value>CashTools: Json to C# Class Generator</value>
+    <comment/>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>An extension for DevToys that can convert Json data into C# Classes</value>
+    <comment/>
+  </data>
+  <data name="LongDisplayTitle" xml:space="preserve">
+    <value>Json to C# Class Generator</value>
+    <comment/>
+  </data>
+  <data name="ShortDisplayTitle" xml:space="preserve">
+    <value>Json to C#</value>
+    <comment/>
+  </data>
+  <data name="Input" xml:space="preserve">
+    <value>Json Body</value>
+    <comment/>
+  </data>
+  <data name="SchemaOutput" xml:space="preserve">
+    <value>Json Schema</value>
+    <comment/>
+  </data>
+  <data name="ClassOutput" xml:space="preserve">
+    <value>C# Class</value>
+    <comment/>
+  </data>
+  <data name="GeneralError" xml:space="preserve">
+    <value>Error:</value>
+    <comment/>
+  </data>
+  <data name="JsonRequiredError" xml:space="preserve">
+    <value>A Json Body is required.</value>
+    <comment/>
+  </data>
+  <data name="OutputType" xml:space="preserve">
+    <value>C# Class</value>
+    <comment/>
+  </data>
+  <data name="OutputTypeDescription" xml:space="preserve">
+    <value>This </value>
+    <comment/>
+  </data>
+  <data name="MakeStaticClass" xml:space="preserve">
+    <value>Make Static Class</value>
+    <comment/>
+  </data>
+  <data name="ClassAccessModifier" xml:space="preserve">
+    <value>Access Modifier for Class</value>
+    <comment/>
+  </data>
+  <data name="PropertiesOrFields" xml:space="preserve">
+    <value>Use Properties or Fields?</value>
     <comment/>
   </data>
 </root>
