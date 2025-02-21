@@ -1,13 +1,11 @@
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using CommunityToolkit.Diagnostics;
 using DevToys.Api;
 using Newtonsoft.Json.Linq;
+using CashTools.ClassGenerator.Enum;
 using static DevToys.Api.GUI;
+using CashTools.ClassGenerator.Helpers;
 
 namespace CashTools.ClassGenerator;
 
@@ -28,8 +26,12 @@ namespace CashTools.ClassGenerator;
 internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 {
     private UIToolView? _view;
-
     private CancellationTokenSource _cancellationTokenSource = new();
+    private readonly IUIMultiLineTextInput _input;
+    private readonly IUIMultiLineTextInput _output;
+    private readonly IUIFileSelector _inputFile;
+    private readonly IUIStack _errorsStack = Stack().Vertical();
+    private readonly IUIInfoBar _defaultError;
 
     public JsonToolsClassGeneratorGui()
     {
@@ -50,29 +52,10 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             .OnFilesSelected(OnInputFileSelected)
             .LimitFileTypesTo(".json");
 
-        _defaultError = GetGeneralErrorInfoBar(CashTools.JsonRequiredError);
+        _defaultError = UIHelper.GetGeneralErrorInfoBar(CashTools.JsonRequiredError);
     }
 
-    #region enums
-
-    enum GridRows
-    {
-        ConfigRow,
-        UploadRow,
-        InputRow,
-        ErrorsRow
-    }
-
-    private enum GridColumns
-    {
-        Stretch
-    }
-
-    #endregion
-
-    #region events
-
-    private async ValueTask OnFileSelected(IUIMultiLineTextInput input, SandboxedFileReader[] files)
+    private static async ValueTask OnFileSelected(IUIMultiLineTextInput input, SandboxedFileReader[] files)
     {
         Guard.HasSizeEqualTo(files, 1);
         using var memStream = new MemoryStream();
@@ -80,7 +63,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 
         await file.CopyFileContentToAsync(memStream, CancellationToken.None);
         var str = Encoding.UTF8.GetString(memStream.ToArray());
-        input.Text(PrettifyAsJsonOrDoNothing(str));
+        input.Text(Helper.PrettifyAsJsonOrDoNothing(str));
     }
 
     private async ValueTask TriggerValidation(string arg)
@@ -97,34 +80,6 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         catch (TaskCanceledException) { }
     }
 
-    public void OnDataReceived(string dataTypeName, object? parsedData)
-    {
-        _input.Text(PrettifyAsJsonOrDoNothing(parsedData!.ToString()!));
-    }
-
-    private async void OnInputFileSelected(SandboxedFileReader[] files)
-    {
-        await OnFileSelected(_input, files);
-    }
-
-    #endregion
-
-
-    #region UIElements
-
-    private readonly IUIMultiLineTextInput _input;
-    private readonly IUIMultiLineTextInput _output;
-
-    private readonly IUIFileSelector _inputFile;
-
-    private readonly IUIStack _errorsStack = Stack().Vertical();
-
-    private readonly IUIInfoBar _defaultError;
-
-    #endregion
-
-    #region methods
-
     private void GenerateCSharpClass
     (
         string className, 
@@ -135,7 +90,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
     {
         var obj = ValidateAndParseSchema();
         if (obj == null) return;
-        StringBuilder sb = new();
+        var sb = new StringBuilder();
 
         sb.AppendLine($"namespace {namespaceName};");
         sb.AppendLine();
@@ -146,94 +101,14 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         foreach (var property in obj!.Properties())
         {
             string propName = property.Name;
-            string propType = GetCSharpType(property.Value.Type);
-            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{ToCamelCase(propName)}\")]");
-            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {ToPascalCase(propName)} {{ get; set; }}");
+            string propType = Helper.GetCSharpType(property.Value.Type);
+            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{Helper.ToCamelCase(propName)}\")]");
+            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {Helper.ToPascalCase(propName)} {{ get; set; }}");
             if (includeJsonPropertyAttribute) sb.AppendLine();
         }
 
         sb.AppendLine("}");
         _output.Text(sb.ToString());
-    }
-
-    private static string GetCSharpType(JTokenType type)
-    {
-        return type switch
-        {
-            JTokenType.Integer => "int",
-            JTokenType.Float => "double",
-            JTokenType.Boolean => "bool",
-            JTokenType.Array => "List<object>",
-            JTokenType.Object => "object",
-            JTokenType.Null => "object",
-            _ => "string",
-        };
-    }
-
-    private static string ToPascalCase(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return string.Empty;
-
-        // Remove non-alphanumeric characters and split words
-        string[] words = Regex.Split(input, @"[^a-zA-Z0-9]+");
-
-        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
-        return string.Concat(Array.ConvertAll(words, word => textInfo.ToTitleCase(word.ToLower())));
-    }
-
-    private static string ToCamelCase(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return string.Empty;
-
-        // Remove non-alphanumeric characters and split words
-        string[] words = Regex.Split(input, @"[^a-zA-Z0-9]+");
-
-        if (words.Length == 0)
-            return string.Empty;
-
-        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
-
-        // Convert first word to lowercase, others to PascalCase
-        for (int i = 1; i < words.Length; i++)
-        {
-            words[i] = textInfo.ToTitleCase(words[i].ToLower());
-        }
-
-        return words[0].ToLower() + string.Concat(words[1..]); // Join with first word in lowercase
-    }
-
-    /**
-         Prettify the JSON string if it is valid JSON, otherwise return the string as is.
-    */
-    private string PrettifyAsJsonOrDoNothing(string str)
-    {
-        try
-        {
-            var prettified = JsonNode.Parse(str);
-            return prettified!.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (JsonException)
-        {
-            return str;
-        }
-    }
-
-    /**
-        Get the error message if the JSON is invalid, otherwise return an empty string.
-    */
-    private string GetJsonParseError(string json)
-    {
-        try
-        {
-            JsonNode.Parse(json);
-            return string.Empty;
-        }
-        catch (JsonException e)
-        {
-            return e.Message;
-        }
     }
 
     private JObject? ValidateAndParseSchema()
@@ -244,11 +119,11 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         }
         else
         {
-            var jsonError = GetJsonParseError(_input.Text);
+            var jsonError = Helper.GetJsonParseError(_input.Text);
             if (!string.IsNullOrEmpty(jsonError))
             {
                 _errorsStack.WithChildren(
-                    GetErrorInfoBar(CashTools.InputError, jsonError)
+                    UIHelper.GetErrorInfoBar(CashTools.InputError, jsonError)
                 );
             }
             else
@@ -261,7 +136,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
                 catch (Exception e)
                 {
                     _errorsStack.WithChildren(
-                        GetErrorInfoBar(CashTools.SchemaError, e.Message)
+                        UIHelper.GetErrorInfoBar(CashTools.SchemaError, e.Message)
                     );
                 }
                 _errorsStack.WithChildren([]);
@@ -272,17 +147,13 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         return null;
     }
 
-    private static IUIInfoBar GetGeneralErrorInfoBar(string error)
-    {
-        return GetErrorInfoBar(CashTools.GeneralError, error);
-    }
+    public void OnDataReceived(string dataTypeName, object? parsedData) => 
+        _input.Text(Helper.PrettifyAsJsonOrDoNothing(parsedData!.ToString()!));
+    
 
-    private static IUIInfoBar GetErrorInfoBar(string title, string error)
-    {
-        return InfoBar().ShowIcon().Title(title).Description(error).NonClosable().Error().Open();
-    }
-
-    #endregion
+    private async void OnInputFileSelected(SandboxedFileReader[] files) =>
+        await OnFileSelected(_input, files);
+    
 
     public UIToolView View
     {
@@ -317,6 +188,4 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             return _view;
         }
     }
-
 }
-
