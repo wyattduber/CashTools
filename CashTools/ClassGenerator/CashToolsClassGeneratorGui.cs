@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using CommunityToolkit.Diagnostics;
 using DevToys.Api;
 using NJsonSchema;
+using NJsonSchema.CodeGeneration.CSharp;
 using static DevToys.Api.GUI;
 
 namespace CashTools.ClassGenerator;
@@ -16,31 +17,30 @@ namespace CashTools.ClassGenerator;
     IconGlyph = '\u0108', 
     GroupName = nameof(CashTools.BaseGroupName), 
     ResourceManagerAssemblyIdentifier = nameof(CashToolsResourceAssemblyIdentifier),
-    ResourceManagerBaseName = "JsonTools.ClassGenerator.JsonToolsClassGenerator",
-    ShortDisplayTitleResourceName = nameof(CashToolsClassGenerator.ShortDisplayTitle), 
-    LongDisplayTitleResourceName = nameof(CashToolsClassGenerator.LongDisplayTitle),
-    DescriptionResourceName = nameof(CashToolsClassGenerator.Description),
-    AccessibleNameResourceName = nameof(CashToolsClassGenerator.AccessibleName)
+    ResourceManagerBaseName = "CashTools.CashTools",
+    ShortDisplayTitleResourceName = nameof(CashTools.ShortDisplayTitle), 
+    LongDisplayTitleResourceName = nameof(CashTools.LongDisplayTitle),
+    DescriptionResourceName = nameof(CashTools.Description),
+    AccessibleNameResourceName = nameof(CashTools.AccessibleName)
 )]
 [AcceptedDataTypeName(PredefinedCommonDataTypeNames.Json)]
 internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 {
     private UIToolView? _view;
 
-    private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private string? _currentTempFile;
 
-    [Import]
-    private ISettingsProvider _settingsProvider = null!;
+    private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
     public JsonToolsClassGeneratorGui()
     {
         _input = MultiLineTextInput()
-            .Title(CashToolsClassGenerator.Input)
+            .Title(CashTools.Input)
             .Language("json")
             .OnTextChanged(TriggerValidation);
 
         _output = MultiLineTextInput()
-            .Title(CashToolsClassGenerator.ClassOutput)
+            .Title(CashTools.ClassOutput)
             .Language("typescript")
             .ReadOnly();
 
@@ -49,7 +49,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             .OnFilesSelected(OnInputFileSelected)
             .LimitFileTypesTo(".json");
 
-        _defaultError = GetGeneralErrorInfoBar(CashToolsClassGenerator.JsonRequiredError);
+        _defaultError = GetGeneralErrorInfoBar(CashTools.JsonRequiredError);
     }
 
     #region enums
@@ -93,6 +93,10 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             await Task.Delay(500, token);
             if (!token.IsCancellationRequested)
             {
+                var tempPath = Path.GetTempPath();
+                _currentTempFile = $"temp{new Random().NextInt64(10000000)}.json";
+                var tempFile = Path.Combine(tempPath, _currentTempFile);
+                await File.WriteAllTextAsync(tempFile, _input.Text, token);
                 GenerateClass();
             }
         }
@@ -134,8 +138,15 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             return;
         }
 
-        var csharpGenerator = new NJsonSchema.CodeGeneration.CSharp.CSharpGenerator(schema);
-        _output.Text(csharpGenerator.GenerateFile());
+        // Settings
+        var cSharpGenerator = new CSharpGenerator(schema)
+        {
+            Settings = 
+            {
+                Namespace = "CashTools.Models",
+            }
+        };
+        _output.Text(cSharpGenerator.GenerateFile());
     }
 
     /**
@@ -182,7 +193,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
             if (!string.IsNullOrEmpty(jsonError))
             {
                 _errorsStack.WithChildren(
-                    GetErrorInfoBar(CashToolsClassGenerator.InputError, jsonError)
+                    GetErrorInfoBar(CashTools.InputError, jsonError)
                 );
             }
             else
@@ -190,24 +201,19 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
                 JsonSchema? schema = null;
                 try
                 {
-                    schema = JsonSchema.FromJsonAsync(_input.Text).Result;
+                    var tempPath = Path.GetTempPath();
+                    var tempFile = Path.Combine(tempPath, _currentTempFile!);
+                    // get the json from the input file
+                    schema = JsonSchema.FromFileAsync(tempFile).Result;
+                    File.Delete(tempFile);
                 }
                 catch (Exception e)
                 {
                     _errorsStack.WithChildren(
-                        GetErrorInfoBar(CashToolsClassGenerator.SchemaError, e.Message)
+                        GetErrorInfoBar(CashTools.SchemaError, e.Message)
                     );
                 }
-                _errorsStack.WithChildren(
-                    [
-                        InfoBar()
-                            .ShowIcon()
-                            .Title(CashToolsClassGenerator.Success)
-                            .Description(CashToolsClassGenerator.ClassGenerated)
-                            .Success()
-                            .Open()
-                    ]
-                );
+                _errorsStack.WithChildren([]);
                 return schema;
             }
         }
@@ -217,7 +223,7 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
 
     private static IUIInfoBar GetGeneralErrorInfoBar(string error)
     {
-        return GetErrorInfoBar(CashToolsClassGenerator.GeneralError, error);
+        return GetErrorInfoBar(CashTools.GeneralError, error);
     }
 
     private static IUIInfoBar GetErrorInfoBar(string title, string error)
