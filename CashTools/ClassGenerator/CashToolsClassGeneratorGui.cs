@@ -23,27 +23,33 @@ namespace CashTools.ClassGenerator;
     AccessibleNameResourceName = nameof(CashToolsClassGenerator.AccessibleName)
 )]
 [AcceptedDataTypeName(PredefinedCommonDataTypeNames.Json)]
-internal sealed class JsonToolsClassGeneratorGui : IGuiTool
+internal sealed class CashToolsClassGeneratorGui : IGuiTool
 {
-    private UIToolView? _view;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly IUIMultiLineTextInput _input;
     private readonly IUIMultiLineTextInput _output;
     private readonly IUIFileSelector _inputFile;
     private readonly IUIStack _errorsStack = Stack().Vertical();
     private readonly IUIInfoBar _defaultError;
+    private readonly IUISingleLineTextInput _classNameInput = SingleLineTextInput();
+    private readonly IUISingleLineTextInput _namespaceNameInput = SingleLineTextInput();
 
     [Import]
     private ISettingsProvider _settingsProvider = null!;
 
     #region Settings
 
-    private static readonly SettingDefinition<bool> isClassStatic = new(name: $"{CashToolsClassGenerator.MakeStaticClass}", defaultValue: false);
-    private static readonly SettingDefinition<AccessModifierOptions> classAccessModifier = new(name: $"{CashToolsClassGenerator.ClassAccessModifier}", defaultValue: AccessModifierOptions.@public);
+    private static readonly SettingDefinition<string> _classNameSetting = new(name: $"{CashToolsClassGenerator.ClassName}", defaultValue: "MyClass");
+    private static readonly SettingDefinition<string> _namespaceNameSetting = new(name: $"{CashToolsClassGenerator.NamespaceName}", defaultValue: "MyNamespace");
+    private static readonly SettingDefinition<bool> _includeJsonPropertyAttributeSetting = new(name: $"{CashToolsClassGenerator.IncludeJsonPropertyAttribute}", defaultValue: false);
+    private static readonly SettingDefinition<bool> _isClassStaticSetting = new(name: $"{CashToolsClassGenerator.MakeStaticClass}", defaultValue: false);
+    private static readonly SettingDefinition<AccessModifierOptions> _classAccessModifierSetting = new(name: $"{CashToolsClassGenerator.ClassAccessModifier}", defaultValue: AccessModifierOptions.@public);
+    private static readonly SettingDefinition<bool> _useNullableTypesSetting = new(name: $"{CashToolsClassGenerator.UseNullableTypes}", defaultValue: false);
+    private static readonly SettingDefinition<bool> _usePascalCaseSetting = new(name: $"{CashToolsClassGenerator.UsePascalCase}", defaultValue: true);
 
     #endregion
 
-    public JsonToolsClassGeneratorGui()
+    public CashToolsClassGeneratorGui()
     {
         _input = MultiLineTextInput()
             .Title(CashToolsClassGenerator.Input)
@@ -85,36 +91,45 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
         try
         {
             await Task.Delay(500, token);
-            if (!token.IsCancellationRequested) GenerateCSharpClass("MyClass", "MyNamespace", true, true); // TODO Add settings for these
+            if (!token.IsCancellationRequested) GenerateCSharpClass(); // TODO Add settings for these
         }
         catch (TaskCanceledException) { }
     }
 
-    private void GenerateCSharpClass
-    (
-        string className, 
-        string namespaceName,
-        bool includeJsonPropertyAttribute,
-        bool useNullableReferenceTypes
-    )
+    private void GenerateCSharpClass()
     {
         var obj = ValidateAndParseSchema();
         if (obj == null) return;
+
+        // Get Settings
+        var className = _settingsProvider.GetSetting(_classNameSetting);
+        if (string.IsNullOrEmpty(className)) className = "MyClass";
+        var namespaceName = _settingsProvider.GetSetting(_namespaceNameSetting);
+        if (string.IsNullOrEmpty(namespaceName)) namespaceName = "MyNamespace";
+        var includeJsonPropertyAttribute = _settingsProvider.GetSetting(_includeJsonPropertyAttributeSetting);
+        var isClassStatic = _settingsProvider.GetSetting(_isClassStaticSetting);
+        var classAccessModifier = _settingsProvider.GetSetting(_classAccessModifierSetting);
+        var useNullableReferenceTypes = _settingsProvider.GetSetting(_useNullableTypesSetting);
+        var usePascalCase = _settingsProvider.GetSetting(_usePascalCaseSetting);
+
         var sb = new StringBuilder();
 
         sb.AppendLine($"namespace {namespaceName};");
         sb.AppendLine();
 
-        sb.AppendLine("public class " + className);
+        sb.AppendLine($"{Helper.ConvertAccessModifier(classAccessModifier)}{(isClassStatic ? " static" : "")} class {className}");
         sb.AppendLine("{");
 
         foreach (var property in obj!.Properties())
         {
             string propName = property.Name;
             string propType = Helper.GetCSharpType(property.Value.Type);
-            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{Helper.ToCamelCase(propName)}\")]");
-            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {Helper.ToPascalCase(propName)} {{ get; set; }}");
-            if (includeJsonPropertyAttribute) sb.AppendLine();
+            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{propName}\")]");
+            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
+
+            // Determine if we are on the last property
+            var lastProperty = obj.Properties().Last();
+            if (includeJsonPropertyAttribute && property != lastProperty) sb.AppendLine();
         }
 
         sb.AppendLine("}");
@@ -166,36 +181,150 @@ internal sealed class JsonToolsClassGeneratorGui : IGuiTool
     
 
     public UIToolView View
-    {
-        get
-        {
-            _view ??= new UIToolView(
+        => new (
+            isScrollable: true,
                 Grid()
-                    .Rows(
-                        (GridRows.ConfigRow, Auto),
-                        (GridRows.UploadRow, Auto),
-                        (GridRows.InputRow, new UIGridLength(1, UIGridUnitType.Fraction)),
-                        (GridRows.ErrorsRow, Auto)
+                .Rows(
+                    (GridRows.ConfigRow, Auto),
+                    (GridRows.UploadRow, Auto),
+                    (GridRows.InputRow, new UIGridLength(1, UIGridUnitType.Fraction)),
+                    (GridRows.ErrorsRow, Auto)
+                )
+                .Columns((GridColumns.Stretch, new UIGridLength(1, UIGridUnitType.Fraction)))
+                .Cells(
+                    Cell(
+                        GridRows.ConfigRow,
+                        GridColumns.Stretch,
+                        Stack()
+                            .Vertical()
+                            .WithChildren(
+                                SettingGroup()
+                                    .Title("Settings")
+                                    .Icon("FluentSystemIcons", '\uE670')
+                                    .WithChildren(
+                                        SettingGroup()
+                                            .Title("Use Custom Class Name")
+                                            .Description("Customize the class name")
+                                            .WithChildren(
+                                                _classNameInput
+                                                .Title("Class Name")
+                                                .OnTextChanged(OnClassNameSettingChanged)
+                                            ),
+                                        SettingGroup()
+                                            .Title("Use Custom Namespace")
+                                            .Description("Customize the namespace")
+                                            .WithChildren(
+                                                _namespaceNameInput
+                                                .Title("Namespace")
+                                                .OnTextChanged(OnNamespaceNamechanged)
+                                            ),
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.IncludeJsonPropertyAttribute)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _includeJsonPropertyAttributeSetting,
+                                                OnIncludeJsonPropertyAttributeChanged
+                                            ),
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.MakeStaticClass)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _isClassStaticSetting,
+                                                OnIsClassStaticChanged
+                                            ),
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.ClassAccessModifier)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _classAccessModifierSetting,
+                                                OnClassAccessModifierChanged,
+                                                Item("private", AccessModifierOptions.@private),
+                                                Item("protected", AccessModifierOptions.@protected),
+                                                Item("internal", AccessModifierOptions.@internal),
+                                                Item("public", AccessModifierOptions.@public),
+                                                Item("protected internal", AccessModifierOptions.@protectedInternal),
+                                                Item("private protected", AccessModifierOptions.@privateProtected)
+                                            ),
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.UseNullableTypes)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _useNullableTypesSetting,
+                                                OnUseNullableTypesChanged
+                                            ),
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.UsePascalCase)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _usePascalCaseSetting,
+                                                OnUsePascalCaseChanged
+                                            )
+                                    )
+                            )
+                    ),
+                    Cell(GridRows.UploadRow, GridColumns.Stretch, _inputFile),
+                    Cell(
+                        GridRows.InputRow,
+                        GridColumns.Stretch,
+                        SplitGrid()
+                            .Vertical()
+                            .WithLeftPaneChild(_input)
+                            .WithRightPaneChild(_output)
+                    ),
+                    Cell(
+                        GridRows.ErrorsRow,
+                        GridColumns.Stretch,
+                        _errorsStack.WithChildren([_defaultError])
                     )
-                    .Columns((GridColumns.Stretch, new UIGridLength(1, UIGridUnitType.Fraction)))
-                    .Cells(
-                        Cell(GridRows.UploadRow, GridColumns.Stretch, _inputFile),
-                        Cell(
-                            GridRows.InputRow,
-                            GridColumns.Stretch,
-                            SplitGrid()
-                                .Vertical()
-                                .WithLeftPaneChild(_input)
-                                .WithRightPaneChild(_output)
-                        ),
-                        Cell(
-                            GridRows.ErrorsRow,
-                            GridColumns.Stretch,
-                            _errorsStack.WithChildren([_defaultError])
-                        )
-                    )
+                )
             );
-            return _view;
-        }
+        
+    private async void OnClassNameSettingChanged(string value) 
+    {
+        var settingValue = _settingsProvider.GetSetting(_classNameSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_classNameSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnNamespaceNamechanged(string value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_namespaceNameSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_namespaceNameSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+    
+    public async void OnIncludeJsonPropertyAttributeChanged(bool value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_includeJsonPropertyAttributeSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_includeJsonPropertyAttributeSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnIsClassStaticChanged(bool value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_isClassStaticSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_isClassStaticSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnClassAccessModifierChanged(AccessModifierOptions value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_classAccessModifierSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_classAccessModifierSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnUseNullableTypesChanged(bool value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_useNullableTypesSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_useNullableTypesSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnUsePascalCaseChanged(bool value)
+    {
+        var settingValue = _settingsProvider.GetSetting(_usePascalCaseSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_usePascalCaseSetting, value);
+        await TriggerValidation(_input.Text);
     }
 }

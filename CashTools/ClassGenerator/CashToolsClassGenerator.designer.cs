@@ -184,4 +184,64 @@ internal class CashToolsClassGenerator {
             return ResourceManager.GetString("PropertiesOrFields", resourceCulture);
         }
     }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string IncludeJsonPropertyAttribute {
+        get {
+            return ResourceManager.GetString("IncludeJsonPropertyAttribute", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string NamespaceName {
+        get {
+            return ResourceManager.GetString("NamespaceName", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string ClassName {
+        get {
+            return ResourceManager.GetString("ClassName", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    ///
+    internal static string UseNullableTypes {
+        get {
+            return ResourceManager.GetString("UseNullableTypes", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string UsePascalCase {
+        get {
+            return ResourceManager.GetString("UsePascalCase", resourceCulture);
+        }
+    }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string ClassNameDescription {
+        get {
+            return ResourceManager.GetString("ClassNameDescription", resourceCulture);
+        }
+    }
 }

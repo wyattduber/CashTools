@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using CashTools.ClassGenerator.Enum;
 using Newtonsoft.Json.Linq;
 
 namespace CashTools.ClassGenerator.Helpers;
@@ -55,38 +56,21 @@ internal partial class Helper
         };
     }
 
-    internal static string ToPascalCase(string input)
+    internal static string UpperCaseFirstLetter(string str) => char.ToUpper(str[0]) + str[1..];
+    
+
+    internal static string ConvertAccessModifier(AccessModifierOptions accessModifier)
     {
-        if (string.IsNullOrWhiteSpace(input))
-            return string.Empty;
-
-        // Remove non-alphanumeric characters and split words
-        string[] words = MyRegex().Split(input);
-
-        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
-        return string.Concat(Array.ConvertAll(words, word => textInfo.ToTitleCase(word.ToLower())));
-    }
-
-    internal static string ToCamelCase(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return string.Empty;
-
-        // Remove non-alphanumeric characters and split words
-        string[] words = MyRegex().Split(input);
-
-        if (words.Length == 0)
-            return string.Empty;
-
-        TextInfo textInfo = CultureInfo.InvariantCulture.TextInfo;
-
-        // Convert first word to lowercase, others to PascalCase
-        for (int i = 1; i < words.Length; i++)
+        return accessModifier switch
         {
-            words[i] = textInfo.ToTitleCase(words[i].ToLower());
-        }
-
-        return words[0].ToLower() + string.Concat(words[1..]); // Join with first word in lowercase
+            AccessModifierOptions.@private => "private",
+            AccessModifierOptions.@protected => "protected",
+            AccessModifierOptions.@internal => "internal",
+            AccessModifierOptions.@public => "public",
+            AccessModifierOptions.@protectedInternal => "protected internal",
+            AccessModifierOptions.@privateProtected => "private protected",
+            _ => throw new ArgumentOutOfRangeException(nameof(accessModifier), accessModifier, null),
+        };
     }
 
     [GeneratedRegex(@"[^a-zA-Z0-9]+")]

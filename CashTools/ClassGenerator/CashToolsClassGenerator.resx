@@ -170,7 +170,31 @@
     <comment/>
   </data>
   <data name="PropertiesOrFields" xml:space="preserve">
-    <value>Use Properties or Fields?</value>
+    <value>Use Properties or Fields</value>
+    <comment/>
+  </data>
+  <data name="ClassName" xml:space="preserve">
+    <value>Class Name</value>
+    <comment/>
+  </data>
+  <data name="NamespaceName" xml:space="preserve">
+    <value>Namespace</value>
+    <comment/>
+  </data>
+  <data name="IncludeJsonPropertyAttribute" xml:space="preserve">
+    <value>Include Json.NET "JsonProperty" Attribute</value>
+    <comment/>
+  </data>
+  <data name="UseNullableTypes" xml:space="preserve">
+    <value>Use Nullable Types</value>
+    <comment/>
+  </data>
+  <data name="UsePascalCase" xml:space="preserve">
+    <value>Use Pascal Case</value>
+    <comment/>
+  </data>
+  <data name="ClassNameDescription" xml:space="preserve">
+    <value>Sets a custom name for the generated class.</value>
     <comment/>
   </data>
 </root>
