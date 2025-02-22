@@ -27,12 +27,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <PackageId>NuGet.Workflow</PackageId>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/wyattduber/CashTools</RepositoryUrl>
-  </PropertyGroup>
-
   <ItemGroup>
     <None Include="LICENSE" Link="LICENSE" Pack="true" PackagePath="" />
     <None Include="README.md" Link="README" Pack="true" PackagePath="" />
