@@ -244,4 +244,14 @@ internal class CashToolsClassGenerator {
             return ResourceManager.GetString("ClassNameDescription", resourceCulture);
         }
     }
+
+    /// <summary>
+    /// Looks up a localized string similar to The input file is required.
+    /// </summary>
+    /// 
+    internal static string MemberAccessModifier {
+        get {
+            return ResourceManager.GetString("MemberAccessModifier", resourceCulture);
+        }
+    }
 }

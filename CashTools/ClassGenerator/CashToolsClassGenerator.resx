@@ -197,4 +197,8 @@
     <value>Sets a custom name for the generated class.</value>
     <comment/>
   </data>
+  <data name="MemberAccessModifier" xml:space="preserve">
+    <value>Access Modifier for Class Members</value>
+    <comment/>
+  </data>
 </root>

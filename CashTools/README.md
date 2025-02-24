@@ -5,4 +5,4 @@ An extension collection for the DevToys application that contains various extens
 
 
 ## Current Extensions
-- ClassGenerator: A tool that can accept a JSON payload and convert it to a C# Class. There are a few options to assist with developing on 
+- ClassGenerator: A tool that can accept a JSON payload and convert it to a C# Class. There are a few options to assist with generating a class, such as access modifiers for the class/members and the ability to add Json.NET attributes.

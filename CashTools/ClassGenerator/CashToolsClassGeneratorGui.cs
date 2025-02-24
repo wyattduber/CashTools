@@ -44,6 +44,7 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
     private static readonly SettingDefinition<bool> _includeJsonPropertyAttributeSetting = new(name: $"{CashToolsClassGenerator.IncludeJsonPropertyAttribute}", defaultValue: false);
     private static readonly SettingDefinition<bool> _isClassStaticSetting = new(name: $"{CashToolsClassGenerator.MakeStaticClass}", defaultValue: false);
     private static readonly SettingDefinition<AccessModifierOptions> _classAccessModifierSetting = new(name: $"{CashToolsClassGenerator.ClassAccessModifier}", defaultValue: AccessModifierOptions.@public);
+    private static readonly SettingDefinition<AccessModifierOptions> _classMemberAccessModifierSetting = new(name: $"{CashToolsClassGenerator.MemberAccessModifier}", defaultValue: AccessModifierOptions.@public);
     private static readonly SettingDefinition<bool> _useNullableTypesSetting = new(name: $"{CashToolsClassGenerator.UseNullableTypes}", defaultValue: false);
     private static readonly SettingDefinition<bool> _usePascalCaseSetting = new(name: $"{CashToolsClassGenerator.UsePascalCase}", defaultValue: true);
 
@@ -109,6 +110,7 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
         var includeJsonPropertyAttribute = _settingsProvider.GetSetting(_includeJsonPropertyAttributeSetting);
         var isClassStatic = _settingsProvider.GetSetting(_isClassStaticSetting);
         var classAccessModifier = _settingsProvider.GetSetting(_classAccessModifierSetting);
+        var classMemberAccessModifier = _settingsProvider.GetSetting(_classMemberAccessModifierSetting);
         var useNullableReferenceTypes = _settingsProvider.GetSetting(_useNullableTypesSetting);
         var usePascalCase = _settingsProvider.GetSetting(_usePascalCaseSetting);
 
@@ -125,7 +127,7 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
             string propName = property.Name;
             string propType = Helper.GetCSharpType(property.Value.Type);
             if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{propName}\")]");
-            sb.AppendLine($"    public {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
+            sb.AppendLine($"    {Helper.ConvertAccessModifier(classMemberAccessModifier)} {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
 
             // Determine if we are on the last property
             var lastProperty = obj.Properties().Last();
@@ -244,6 +246,19 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
                                                 Item("public", AccessModifierOptions.@public),
                                                 Item("protected internal", AccessModifierOptions.@protectedInternal),
                                                 Item("private protected", AccessModifierOptions.@privateProtected)
+                                            ), 
+                                        Setting()
+                                            .Title(CashToolsClassGenerator.MemberAccessModifier)
+                                            .Handle(
+                                                _settingsProvider,
+                                                _classMemberAccessModifierSetting,
+                                                OnClassMemberAccessModifierChanged,
+                                                Item("private", AccessModifierOptions.@private),
+                                                Item("protected", AccessModifierOptions.@protected),
+                                                Item("internal", AccessModifierOptions.@internal),
+                                                Item("public", AccessModifierOptions.@public),
+                                                Item("protected internal", AccessModifierOptions.@protectedInternal),
+                                                Item("private protected", AccessModifierOptions.@privateProtected)
                                             ),
                                         Setting()
                                             .Title(CashToolsClassGenerator.UseNullableTypes)
@@ -311,6 +326,13 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
     {
         var settingValue = _settingsProvider.GetSetting(_classAccessModifierSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_classAccessModifierSetting, value);
+        await TriggerValidation(_input.Text);
+    }
+
+    public async void OnClassMemberAccessModifierChanged(AccessModifierOptions value) 
+    {
+        var settingValue = _settingsProvider.GetSetting(_classMemberAccessModifierSetting);
+        if (settingValue != value) _settingsProvider.SetSetting(_classMemberAccessModifierSetting, value);
         await TriggerValidation(_input.Text);
     }
 
