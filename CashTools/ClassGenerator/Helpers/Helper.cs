@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -42,18 +43,60 @@ internal partial class Helper
         }
     }
 
-    internal static string GetCSharpType(JTokenType type)
+    internal static string GetCSharpType(JToken token, string propName, StringBuilder subClasses)
     {
-        return type switch
+        return token.Type switch
         {
             JTokenType.Integer => "int",
-            JTokenType.Float => "double",
+            JTokenType.Float => "decimal",
             JTokenType.Boolean => "bool",
-            JTokenType.Array => "List<object>",
-            JTokenType.Object => "object",
+            JTokenType.Guid => "Guid",
+            JTokenType.Date => "DateTime",
+            JTokenType.String => TryParseSpecialTypes(token.ToString()),
+            JTokenType.Array => GetListType(token, propName, subClasses),
+            JTokenType.Object => CreateSubClass(token, propName, subClasses),
             JTokenType.Null => "object",
             _ => "string",
         };
+    }
+
+    private static string TryParseSpecialTypes(string value)
+    {
+        if (Guid.TryParse(value, out _)) return "Guid";
+        if (DateTime.TryParse(value, out _)) return "DateTime";
+        if (DateOnly.TryParse(value, out _)) return "DateOnly";
+        if (decimal.TryParse(value, out _)) return "decimal";
+        return "string";
+    }
+
+    private static string GetListType(JToken token, string propName, StringBuilder subClasses)
+    {
+        var arrayItems = token.Children<JToken>().FirstOrDefault();
+        if (arrayItems != null)
+        {
+            string itemType = GetCSharpType(arrayItems, propName + "Item", subClasses);
+            return $"List<{itemType}>";
+        }
+        return "List<object>";
+    }
+
+    private static string CreateSubClass(JToken token, string propName, StringBuilder subClasses)
+    {
+        string className = UpperCaseFirstLetter(propName);
+        subClasses.AppendLine($"public class {className}");
+        subClasses.AppendLine("{");
+        
+        foreach (var subProperty in token.Children<JProperty>())
+        {
+            string subPropName = subProperty.Name;
+            string subPropType = GetCSharpType(subProperty.Value, subPropName, subClasses);
+            subClasses.AppendLine($"    public {subPropType} {UpperCaseFirstLetter(subPropName)} {{ get; set; }}");
+        }
+        
+        subClasses.AppendLine("}");
+        subClasses.AppendLine();
+        
+        return className;
     }
 
     internal static string UpperCaseFirstLetter(string str) => char.ToUpper(str[0]) + str[1..];

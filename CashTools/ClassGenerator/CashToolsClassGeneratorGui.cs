@@ -103,10 +103,8 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
         if (obj == null) return;
 
         // Get Settings
-        var className = _settingsProvider.GetSetting(_classNameSetting);
-        if (string.IsNullOrEmpty(className)) className = "MyClass";
-        var namespaceName = _settingsProvider.GetSetting(_namespaceNameSetting);
-        if (string.IsNullOrEmpty(namespaceName)) namespaceName = "MyNamespace";
+        var className = _settingsProvider.GetSetting(_classNameSetting) ?? "MyClass";
+        var namespaceName = _settingsProvider.GetSetting(_namespaceNameSetting) ?? "MyNamespace";
         var includeJsonPropertyAttribute = _settingsProvider.GetSetting(_includeJsonPropertyAttributeSetting);
         var isClassStatic = _settingsProvider.GetSetting(_isClassStaticSetting);
         var classAccessModifier = _settingsProvider.GetSetting(_classAccessModifierSetting);
@@ -116,25 +114,26 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
 
         var sb = new StringBuilder();
 
-        sb.AppendLine($"namespace {namespaceName};");
-        sb.AppendLine();
-
-        sb.AppendLine($"{Helper.ConvertAccessModifier(classAccessModifier)}{(isClassStatic ? " static" : "")} class {className}");
+        sb.AppendLine($"namespace {namespaceName}");
         sb.AppendLine("{");
+        sb.AppendLine($"    {Helper.ConvertAccessModifier(classAccessModifier)}{(isClassStatic ? " static" : "")} class {className}");
+        sb.AppendLine("    {");
 
+        var subClasses = new StringBuilder();
+        
         foreach (var property in obj!.Properties())
         {
             string propName = property.Name;
-            string propType = Helper.GetCSharpType(property.Value.Type);
-            if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{propName}\")]");
-            sb.AppendLine($"    {Helper.ConvertAccessModifier(classMemberAccessModifier)} {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
-
-            // Determine if we are on the last property
-            var lastProperty = obj.Properties().Last();
-            if (includeJsonPropertyAttribute && property != lastProperty) sb.AppendLine();
+            string propType = Helper.GetCSharpType(property.Value, propName, subClasses);
+            if (includeJsonPropertyAttribute) sb.AppendLine($"        [JsonProperty(\"{propName}\")]");
+            sb.AppendLine($"        {Helper.ConvertAccessModifier(classMemberAccessModifier)} {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
+            
+            if (includeJsonPropertyAttribute) sb.AppendLine();
         }
 
+        sb.AppendLine("    }");
         sb.AppendLine("}");
+        sb.Append(subClasses);
         _output.Text(sb.ToString());
     }
 
