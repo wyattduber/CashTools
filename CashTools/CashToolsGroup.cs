@@ -6,7 +6,7 @@ namespace CashTools;
 [Export(typeof(GuiToolGroup))]
 [Name(nameof(CashTools.BaseGroupName))]
 [Order(Before = PredefinedCommonToolGroupNames.Converters)]
-internal class CashToolsGroup : GuiToolGroup
+internal sealed class CashToolsGroup : GuiToolGroup
 {
     [ImportingConstructor]
     internal CashToolsGroup()

@@ -85,14 +85,14 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
 
     private async ValueTask TriggerValidation(string arg)
     {
-        _cancellationTokenSource.Cancel();
+        await _cancellationTokenSource.CancelAsync();
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
 
         try
         {
             await Task.Delay(500, token);
-            if (!token.IsCancellationRequested) GenerateCSharpClass(); // TODO Add settings for these
+            if (!token.IsCancellationRequested) GenerateCSharpClass();
         }
         catch (TaskCanceledException) { }
     }
@@ -122,10 +122,10 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
         sb.AppendLine($"{Helper.ConvertAccessModifier(classAccessModifier)}{(isClassStatic ? " static" : "")} class {className}");
         sb.AppendLine("{");
 
-        foreach (var property in obj!.Properties())
+        foreach (var property in obj.Properties())
         {
-            string propName = property.Name;
-            string propType = Helper.GetCSharpType(property.Value.Type);
+            var propName = property.Name;
+            var propType = Helper.GetCSharpType(property.Value.Type);
             if (includeJsonPropertyAttribute) sb.AppendLine($"    [JsonProperty(\"{propName}\")]");
             sb.AppendLine($"    {Helper.ConvertAccessModifier(classMemberAccessModifier)} {propType}{(useNullableReferenceTypes ? "?" : "")} {(usePascalCase ? Helper.UpperCaseFirstLetter(propName) : propName)} {{ get; set; }}");
 
@@ -166,7 +166,7 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
                         UIHelper.GetErrorInfoBar(CashToolsClassGenerator.SchemaError, e.Message)
                     );
                 }
-                _errorsStack.WithChildren([]);
+                _errorsStack.WithChildren();
                 return jObject;
             }
         }
@@ -178,7 +178,7 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
         _input.Text(Helper.PrettifyAsJsonOrDoNothing(parsedData!.ToString()!));
     
 
-    private async void OnInputFileSelected(SandboxedFileReader[] files) =>
+    private async ValueTask OnInputFileSelected(SandboxedFileReader[] files) =>
         await OnFileSelected(_input, files);
     
 
@@ -294,56 +294,56 @@ internal sealed class CashToolsClassGeneratorGui : IGuiTool
                 )
             );
         
-    private async void OnClassNameSettingChanged(string value) 
+    private async ValueTask OnClassNameSettingChanged(string value) 
     {
         var settingValue = _settingsProvider.GetSetting(_classNameSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_classNameSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnNamespaceNamechanged(string value)
+    private async ValueTask OnNamespaceNamechanged(string value)
     {
         var settingValue = _settingsProvider.GetSetting(_namespaceNameSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_namespaceNameSetting, value);
         await TriggerValidation(_input.Text);
     }
     
-    public async void OnIncludeJsonPropertyAttributeChanged(bool value)
+    private async ValueTask OnIncludeJsonPropertyAttributeChanged(bool value)
     {
         var settingValue = _settingsProvider.GetSetting(_includeJsonPropertyAttributeSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_includeJsonPropertyAttributeSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnIsClassStaticChanged(bool value)
+    private async ValueTask OnIsClassStaticChanged(bool value)
     {
         var settingValue = _settingsProvider.GetSetting(_isClassStaticSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_isClassStaticSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnClassAccessModifierChanged(AccessModifierOptions value)
+    private async ValueTask OnClassAccessModifierChanged(AccessModifierOptions value)
     {
         var settingValue = _settingsProvider.GetSetting(_classAccessModifierSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_classAccessModifierSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnClassMemberAccessModifierChanged(AccessModifierOptions value) 
+    private async ValueTask OnClassMemberAccessModifierChanged(AccessModifierOptions value) 
     {
         var settingValue = _settingsProvider.GetSetting(_classMemberAccessModifierSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_classMemberAccessModifierSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnUseNullableTypesChanged(bool value)
+    private async ValueTask OnUseNullableTypesChanged(bool value)
     {
         var settingValue = _settingsProvider.GetSetting(_useNullableTypesSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_useNullableTypesSetting, value);
         await TriggerValidation(_input.Text);
     }
 
-    public async void OnUsePascalCaseChanged(bool value)
+    private async ValueTask OnUsePascalCaseChanged(bool value)
     {
         var settingValue = _settingsProvider.GetSetting(_usePascalCaseSetting);
         if (settingValue != value) _settingsProvider.SetSetting(_usePascalCaseSetting, value);

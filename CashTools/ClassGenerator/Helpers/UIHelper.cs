@@ -3,7 +3,7 @@ using static DevToys.Api.GUI;
 
 namespace CashTools.ClassGenerator.Helpers;
 
-internal class UIHelper
+internal abstract class UIHelper
 {
     internal static IUIInfoBar GetGeneralErrorInfoBar(string error) =>
         GetErrorInfoBar(CashToolsClassGenerator.GeneralError, error);

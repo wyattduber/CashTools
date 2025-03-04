@@ -1,13 +1,11 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using CashTools.ClassGenerator.Enum;
 using Newtonsoft.Json.Linq;
 
 namespace CashTools.ClassGenerator.Helpers;
 
-internal partial class Helper
+internal abstract class Helper
 {
     
     /**
@@ -72,7 +70,4 @@ internal partial class Helper
             _ => throw new ArgumentOutOfRangeException(nameof(accessModifier), accessModifier, null),
         };
     }
-
-    [GeneratedRegex(@"[^a-zA-Z0-9]+")]
-    private static partial Regex MyRegex();
 }
